@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>AetherCore: TCG V1.0</title>
+<style>
+  :root {
+    /* Neon TCG Theme: Pitch Black, Teal, Purple */
+    --bg-base: #05020a;
+    --panel-bg: #0b0514;
+    --panel-border: #23113d;
+    --term-main: #00e5ff; /* Neon Teal */
+    --term-sec: #bd00ff; /* Neon Purple */
+    --term-gold: #ffea00; 
+    --term-red: #ff2a2a; 
+    --text-dim: #735c8c;
+    --text-bright: #e6f7ff;
+
+    --t0-col: #8c9ba5;
+    --t1-col: #4caf50;
+    --t2-col: #00b0ff;
+    --t3-col: #2979ff;
+    --t4-col: #7c4dff;
+    --t5-col: #d500f9;
+    --t6-col: #ff9100;
+    --t7-col: #ff3d00;
+    --t8-col: #ff1744;
+    --t9-col: #00e5ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    width: 100%; height: 100%; background: var(--bg-base); color: var(--text-bright);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* Holographic Foil Overlay Effect */
+  body::before {
+    content: " "; display: block; position: fixed; top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(0, 229, 255, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(189, 0, 255, 0.02) 1px, transparent 1px);
+    background-size: 20px 20px; z-index: 998; pointer-events: none;
+  }
+
+  header {
+    flex-shrink: 0; background: #080311; border-bottom: 2px solid var(--term-sec);
+    padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; z-index: 100;
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: center; }
+  .os-brand { font-size: 16px; font-weight: 900; color: var(--term-main); text-shadow: 0 0 10px rgba(0, 229, 255, 0.6); letter-spacing: 1px; font-style: italic;}
+  .os-brand span { color: var(--term-sec); text-shadow: 0 0 10px rgba(189, 0, 255, 0.6); }
+
+  .hud-stats { display: flex; gap: 6px; overflow-x: auto; white-space: nowrap; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+  .hud-stats::-webkit-scrollbar { display: none; }
+  .hud-tag { background: rgba(0,0,0,0.8); border: 1px solid var(--panel-border); padding: 6px 10px; border-radius: 4px; font-size: 11px; flex-shrink: 0; font-weight:bold; }
+  
+  nav {
+    flex-shrink: 0; display: flex; background: var(--panel-bg); border-bottom: 1px solid var(--panel-border);
+    overflow-x: auto; white-space: nowrap; z-index: 99; -webkit-overflow-scrolling: touch;
+  }
+  nav::-webkit-scrollbar { display: none; }
+  .nav-btn {
+    flex: 0 0 auto; padding: 14px 16px; background: transparent; border: none; border-right: 1px solid var(--panel-border);
+    color: var(--text-dim); font-size: 11px; text-transform: uppercase; font-weight: 800; cursor: pointer; letter-spacing: 1px;
+  }
+  .nav-btn.active { background: rgba(0, 229, 255, 0.1); color: var(--term-main); border-bottom: 2px solid var(--term-main); }
+
+  main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px; padding-bottom: 70px; position:relative; z-index:10; }
+  .view-tab { display: none; width: 100%; flex-direction: column; gap: 12px; }
+  .view-tab.active { display: flex; }
+
+  .panel { background: rgba(11, 5, 20, 0.85); border: 1px solid var(--panel-border); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; }
+  .panel-header {
+    font-size: 13px; font-weight: 900; color: var(--term-sec); text-transform: uppercase; letter-spacing: 1px;
+    padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px dashed var(--panel-border); display: flex; flex-direction: column; gap: 6px;
+  }
+  .panel-header-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+
+  button.action-btn {
+    background: rgba(0, 229, 255, 0.05); border: 1px solid var(--term-main); color: var(--term-main);
+    padding: 10px 14px; cursor: pointer; text-transform: uppercase; font-size: 11px; font-weight: 900; border-radius: 4px; transition: 0.1s; letter-spacing:0.5px;
+  }
+  button.action-btn:active { background: var(--term-main); color: #000; box-shadow: 0 0 15px var(--term-main); }
+  button.action-btn:disabled { border-color: #23113d; color: #4a3366; background: transparent; box-shadow: none; cursor:not-allowed; }
+  
+  button.purple-btn { border-color: var(--term-sec); color: var(--term-sec); background: rgba(189, 0, 255, 0.05); }
+  button.purple-btn:active { background: var(--term-sec); color: #000; box-shadow: 0 0 15px var(--term-sec); }
+  
+  button.red-btn { border-color: var(--term-red); color: var(--term-red); background: rgba(255, 42, 42, 0.05); }
+  button.red-btn:active { background: var(--term-red); color: #fff; box-shadow: 0 0 15px var(--term-red); }
+
+  button.gold-btn { border-color: var(--term-gold); color: var(--term-gold); background: rgba(255, 234, 0, 0.05); }
+  button.gold-btn:active { background: var(--term-gold); color: #000; box-shadow: 0 0 15px var(--term-gold); }
+
+  .hangar-grid { display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; }
+  @media(min-width: 600px) { .hangar-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); } }
+  .suit-card { background: #05020a; border: 1px solid #23113d; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 8px; position: relative; }
+  
+  .auction-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .auction-slot { background: #05020a; border: 1px solid var(--panel-border); padding: 14px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; }
+  .auction-timer-bg { width: 100%; height: 8px; background: #0b0514; border: 1px solid var(--term-main); border-radius:4px; overflow:hidden;}
+  .auction-timer-bar { height: 100%; width: 100%; background: var(--term-main); transition: width 0.1s linear; }
+
+  .combat-log { height: 200px; background: #000; border: 1px solid var(--panel-border); border-radius:4px; padding: 10px; overflow-y: auto; font-size: 11px; line-height: 1.5; font-family: monospace; }
+  .fraction-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+
+  #toast-rack { position: fixed; bottom: 20px; left: 12px; right: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 1000; pointer-events: none; }
+  .toast { background: #0b0514; border-left: 4px solid var(--term-main); color: var(--text-bright); padding: 12px 14px; font-size: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.9); animation: slideIn 0.2s, fadeOut 0.4s 3.2s forwards; pointer-events: auto; font-weight: bold; }
+  @keyframes slideIn { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
+  
+  .entity-title { font-weight: 900; font-style: italic; font-size:14px; }
+  .stat-block { font-family: monospace; font-size:11px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="os-brand">AETHERCORE: <span>TCG V1.0</span></div>
+    <div style="display:flex; gap: 6px; align-items:center;">
+      <button class="action-btn" style="padding:6px 10px; font-size:9px;" onclick="saveGame()">SAVE</button>
+      <button class="action-btn" style="padding:6px 10px; font-size:9px;" onclick="loadGame()">LOAD</button>
+      <button class="action-btn purple-btn" style="padding:6px 10px; font-size:9px;" onclick="godMode()">TCG GODFATHER</button>
+    </div>
+  </div>
+  <div class="hud-stats">
+    <div class="hud-tag">BANK: <span id="hud-credits" style="color:var(--term-main); font-size:12px;">$0</span></div>
+    <div class="hud-tag">STORE LVL: <span id="hud-ascension" style="color:var(--term-sec); font-size:12px;">0</span></div>
+    <div class="hud-tag">BINDER: <span id="hud-count" style="color:#fff; font-size:12px;">0</span></div>
+  </div>
+</header>
+
+<nav>
+  <button class="nav-btn active" onclick="setTab('market')">Singles Case</button>
+  <button class="nav-btn" onclick="setTab('cargo')">Booster Packs</button>
+  <button class="nav-btn" onclick="setTab('hangar')">The Binder</button>
+  <button class="nav-btn" onclick="setTab('auction')">Streamer Breaks</button>
+  <button class="nav-btn" onclick="setTab('upgrades')">Shop Upgrades</button>
+</nav>
+
+<main>
+
+  <!-- TAB 1: REVOLVING MARKET (SINGLES CASE) -->
+  <div id="tab-market" class="view-tab active">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-header-row">
+          <span>Glass Singles Case</span>
+          <span style="font-size:10px; color:var(--term-main);">REFRESH: <span id="market-timer" style="font-size:14px; font-weight:bold;">10.0</span>s</span>
+        </div>
+      </div>
+      <p style="font-size:11px; color:var(--text-dim); margin-bottom:12px;">5 cards are presented every 10 seconds. Buy under market value, grade them, and sell high.</p>
+      
+      <div id="revolving-market-grid" class="hangar-grid"></div>
+    </div>
+  </div>
+
+  <!-- TAB 2: BOOSTER PACKS (GACHA) -->
+  <div id="tab-cargo" class="view-tab">
+    <div class="panel">
+      <div class="panel-header">Distributor Shipments</div>
+      <p style="font-size:11px; color:var(--text-dim); margin-bottom:14px;">Crack sealed product. Drop rates: 50% / 30% / 15% / 5% across the 4 ascending rarities of each box tier.</p>
+      
+      <div style="border:1px solid var(--panel-border); padding:10px; margin-bottom:10px; border-radius:4px;">
+        <div style="font-size:11px; color:var(--text-bright); font-weight:bold; margin-bottom:8px;">RETAIL BLASTERS [Rarities I - IV]</div>
+        <div style="display:flex; gap:8px;"><button class="action-btn" style="flex:1;" onclick="buyCargo(0, 1)">Crack 1 ($5K)</button><button class="action-btn" style="flex:1;" onclick="buyCargo(0, 3)">Crack 3 ($15K)</button></div>
+      </div>
+      <div style="border:1px solid var(--panel-border); padding:10px; margin-bottom:10px; border-radius:4px;">
+        <div style="font-size:11px; color:var(--term-main); font-weight:bold; margin-bottom:8px;">HOBBY BOXES [Rarities III - VI]</div>
+        <div style="display:flex; gap:8px;"><button class="action-btn" style="flex:1;" onclick="buyCargo(1, 1)">Crack 1 ($25K)</button><button class="action-btn" style="flex:1;" onclick="buyCargo(1, 3)">Crack 3 ($75K)</button></div>
+      </div>
+      <div style="border:1px solid var(--panel-border); padding:10px; margin-bottom:10px; border-radius:4px;">
+        <div style="font-size:11px; color:var(--term-sec); font-weight:bold; margin-bottom:8px;">PREMIUM CASES [Rarities V - VIII]</div>
+        <div style="display:flex; gap:8px;"><button class="action-btn purple-btn" style="flex:1;" onclick="buyCargo(2, 1)">Crack 1 ($100K)</button><button class="action-btn purple-btn" style="flex:1;" onclick="buyCargo(2, 3)">Crack 3 ($300K)</button></div>
+      </div>
+      <div style="border:1px solid var(--panel-border); padding:10px; margin-bottom:20px; border-radius:4px;">
+        <div style="font-size:11px; color:var(--term-gold); font-weight:bold; margin-bottom:8px;">VINTAGE CASES [Rarities VII - X]</div>
+        <div style="display:flex; gap:8px;"><button class="action-btn gold-btn" style="flex:1;" onclick="buyCargo(3, 1)">Crack 1 ($500K)</button><button class="action-btn gold-btn" style="flex:1;" onclick="buyCargo(3, 3)">Crack 3 ($1.5M)</button></div>
+      </div>
+      
+      <div class="panel-header">10 Rarity Tiers Overview (80,000 Cards)</div>
+      <div id="tier-breakdown-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; font-size:10px; text-align:center;"></div>
+    </div>
+  </div>
+
+  <!-- TAB 3: THE BINDER -->
+  <div id="tab-hangar" class="view-tab">
+    <div class="panel">
+      <div class="panel-header">Active Showcase Display</div>
+      <div id="equipped-panel"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-header-row">
+          <span>Card Binder</span>
+          <div style="display:flex; gap:4px;">
+            <button class="action-btn purple-btn" style="padding:6px 8px; font-size:9px;" onclick="sortHangar('value')">Sort: VAL</button>
+            <button class="action-btn purple-btn" style="padding:6px 8px; font-size:9px;" onclick="sortHangar('tier')">Sort: RARITY</button>
+          </div>
+        </div>
+        <button class="action-btn" style="font-size:11px; width:100%; padding:12px; margin-bottom:10px;" onclick="fillAuctions()">Auto-Fill Streamer Breaks (5 Slots)</button>
+        <div style="font-size:10px; color:var(--text-dim); margin-bottom:6px; font-weight:bold;">BULK LIQUIDATION (50% Base Val):</div>
+        <div class="fraction-row">
+          <button class="action-btn red-btn" onclick="quickSell(0)">Rarity I</button>
+          <button class="action-btn red-btn" onclick="quickSell(1)">Rarity II &lt;</button>
+          <button class="action-btn red-btn" onclick="quickSell(2)">Rarity III &lt;</button>
+          <button class="action-btn red-btn" onclick="quickSell(3)">Rarity IV &lt;</button>
+        </div>
+      </div>
+      <div id="hangar-grid" class="hangar-grid"></div>
+    </div>
+  </div>
+
+  <!-- TAB 4: STREAMER BREAKS / LIVE AUCTIONS -->
+  <div id="tab-auction" class="view-tab">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-header-row">
+          <span>Streamer Break Auctions</span>
+          <span style="font-size:11px; color:var(--term-sec);"><span id="auction-count">0</span>/5 SLOTS</span>
+        </div>
+      </div>
+      <button class="action-btn purple-btn" style="margin-bottom:12px; padding:12px;" onclick="fillAuctions()">Pull from Binder</button>
+      <p style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">Auctions last 20s. Sniping in the last 1s resets the clock to 3s. Bids start at 90% Base Value!</p>
+      
+      <div id="auction-idle" style="text-align:center; padding: 30px; color:var(--text-dim); font-size:12px; font-weight:bold;">The auction blocks are empty.</div>
+      <div id="auction-board" class="auction-grid"></div>
+    </div>
+  </div>
+
+  <!-- TAB 5: SHOP UPGRADES -->
+  <div id="tab-upgrades" class="view-tab">
+    <div class="panel">
+      <div class="panel-header">Black Market Operations</div>
+      <p style="font-size:11px; color:var(--text-dim); margin-bottom:14px;">Endless investments. Cost scales exponentially.</p>
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+        <div style="background:var(--bg-base); border:1px solid var(--panel-border); padding:12px; border-radius:4px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span style="color:var(--term-main); font-weight:bold; font-size:12px;">Hype Marketing</span>
+            <span style="color:var(--text-dim); font-size:11px;">Lvl <span id="upg-val-lvl">0</span> (+<span id="upg-val-pct">0</span>%)</span>
+          </div>
+          <div style="font-size:10px; color:var(--text-dim); margin-bottom:10px;">Permanently increases the base value of ALL generated cards by 2% per level.</div>
+          <button id="btn-upg-val" class="action-btn" style="width:100%;" onclick="buyUpgrade('value')">Invest ($<span id="upg-val-cost">10000</span>)</button>
+        </div>
+
+        <div style="background:var(--bg-base); border:1px solid var(--panel-border); padding:12px; border-radius:4px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span style="color:var(--term-sec); font-weight:bold; font-size:12px;">Distributor Hookups</span>
+            <span style="color:var(--text-dim); font-size:11px;">Lvl <span id="upg-disc-lvl">0</span> (-<span id="upg-disc-pct">0</span>%)</span>
+          </div>
+          <div style="font-size:10px; color:var(--text-dim); margin-bottom:10px;">Reduces the purchase price of singles in the Revolving Market by 2% per level.</div>
+          <button id="btn-upg-disc" class="action-btn purple-btn" style="width:100%;" onclick="buyUpgrade('discount')">Invest ($<span id="upg-disc-cost">15000</span>)</button>
+        </div>
+      </div>
+
+      <div class="panel-header" style="color:var(--term-red); border-color:var(--term-red);">Store Expansion (Prestige)</div>
+      <p style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">Sell your current inventory. Resets Bank and Binder. Keeps Upgrades. Permanently grants +5% Global Value and -5% Market Cost per Expansion Level.</p>
+      <button class="action-btn red-btn" style="padding:14px; font-size:12px;" onclick="prestige()">Expand Store (Req: $<span id="prestige-req">100K</span>)</button>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast-rack"></div>
+
+<script>
+  /* ================= 80,000 PROCEDURAL CARD ROSTER ================= */
+  const PREFIXES = ["1st Ed.","Shadowless","Holo","Reverse Holo","Ghost Rare","Secret Rare","Full Art","Alt Art","Promo","Gem Mint","Base Set","Jungle","Fossil","Prismatic","Shatterfoil","Gold Star","Rainbow","Radiant","Shining","Cursed"];
+  const BRANDS = ["Pocket-Mons","Duel Monsters","Magic Gathering","Flesh & Blood","Digi-Beasts","Cardfight","MetaZoo","Lorcana","Dragon Balls","One Piece","Weiss","Force of Will","Bakugan","B-Daman","Gundam War","Marvelous","Star Wars","Warcraft","Spoils","Netrunner"];
+  const MODELS = ["Thunder Mouse","Dark Magus","Blue-Eyes Drake","Black Lotus","Charizard","Mewtwo","Exodia","Time Wizard","Red-Eyes Wyrm","Gengar","Lugia","Rayquaza","Umbreon","Jace","Liliana","Bolaboss","Goku","Luffy","Kaiba","Yugi"];
+  const SUFFIXES = ["VMAX","GX","EX","SP","Lv.X","Break","VSTAR","Legend","Prime","ex"]; 
+
+  const TIERS = [
+    { tier: 1, name: "Rarity I: Common", color: "var(--t0-col)", mult: 1.0, minBase: 500 },
+    { tier: 2, name: "Rarity II: Uncommon", color: "var(--t1-col)", mult: 2.5, minBase: 1250 },
+    { tier: 3, name: "Rarity III: Rare", color: "var(--t2-col)", mult: 6.0, minBase: 3000 },
+    { tier: 4, name: "Rarity IV: Holo Rare", color: "var(--t3-col)", mult: 15.0, minBase: 7500 },
+    { tier: 5, name: "Rarity V: Ultra Rare", color: "var(--t4-col)", mult: 40.0, minBase: 20000 },
+    { tier: 6, name: "Rarity VI: Secret Rare", color: "var(--t5-col)", mult: 100.0, minBase: 50000 },
+    { tier: 7, name: "Rarity VII: Full Art", color: "var(--t6-col)", mult: 250.0, minBase: 125000 },
+    { tier: 8, name: "Rarity VIII: Ghost Rare", color: "var(--t7-col)", mult: 700.0, minBase: 350000 },
+    { tier: 9, name: "Rarity IX: Vintage Grail", color: "var(--t8-col)", mult: 2000.0, minBase: 1000000 },
+    { tier: 10, name: "Rarity X: Apex Mint", color: "var(--t9-col)", mult: 5500.0, minBase: 2750000 }
+  ];
+
+  let State = {
+    credits: 5000,
+    prestige: 0,
+    sortMode: 'value',
+    hangar: [],
+    marketCars: [],
+    marketTimer: 10.0,
+    auctions: [],
+    equippedId: null,
+    upgrades: {
+        valueLvl: 0,
+        discountLvl: 0
+    }
+  };
+
+  let globalInterval = null;
+
+  /* ================= UTILS & MATH ================= */
+  function fmt(n) {
+    if(n >= 1e15) return (n/1e15).toFixed(2) + 'Q';
+    if(n >= 1e12) return (n/1e12).toFixed(2) + 'T';
+    if(n >= 1e9) return (n/1e9).toFixed(2) + 'B';
+    if(n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+    if(n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+    return Math.floor(n).toLocaleString(); 
+  }
+  
+  function toast(msg) {
+    const rack = document.getElementById('toast-rack');
+    const el = document.createElement('div'); el.className = 'toast'; el.innerHTML = msg;
+    rack.appendChild(el); setTimeout(() => el.remove(), 3200);
+  }
+
+  function godMode() { 
+    State.credits += 1000000000; 
+    toast("TCG GODFATHER OVERRIDE: +$1 BILLION"); 
+    updateHUD(); 
+  }
+
+  function saveGame() {
+    localStorage.setItem('aetherCoreTCGV1', JSON.stringify(State));
+    toast("Collection saved.");
+  }
+  
+  function loadGame() {
+    let saved = localStorage.getItem('aetherCoreTCGV1');
+    if(saved) {
+      State = JSON.parse(saved);
+      if(!State.marketCars) State.marketCars = [];
+      if(!State.upgrades) State.upgrades = {valueLvl:0, discountLvl:0};
+      if(!State.marketTimer) State.marketTimer = 10.0;
+      updateHUD(); renderHangar(); renderMarket(); renderAuctions(); renderUpgrades();
+      toast("Collection restored.");
+    } else {
+      toast("No save data found.");
+    }
+  }
+
+  /* ================= PROCEDURAL GENERATION ================= */
+  function getValueMultiplier() {
+      let upgMult = 1.0 + (State.upgrades.valueLvl * 0.02);
+      let presMult = 1.0 + (State.prestige * 0.05);
+      return upgMult * presMult;
+  }
+
+  function getDiscountMultiplier() {
+      let discount = (State.upgrades.discountLvl * 0.02) + (State.prestige * 0.05);
+      if(discount > 0.7) discount = 0.7; 
+      return 0.8 * (1.0 - discount); 
+  }
+
+  function createCar(tIdx) {
+      let p = PREFIXES[Math.floor(Math.random() * PREFIXES.length)];
+      let b = BRANDS[Math.floor(Math.random() * BRANDS.length)];
+      let m = MODELS[Math.floor(Math.random() * MODELS.length)];
+      let s = SUFFIXES[Math.floor(Math.random() * SUFFIXES.length)];
+
+      let tData = TIERS[tIdx];
+
+      // Base generation value
+      let rawBase = 500 + Math.floor(Math.random() * 500);
+      let baseVal = Math.floor(rawBase * tData.mult);
+      
+      // Subgrades to match math logic: Centering (hp), Corners (atk), Edges (def), Surface (spd)
+      let hp = Math.floor((rawBase * 1.5) * tData.mult); 
+      let atk = Math.floor((rawBase * 0.45) * tData.mult); 
+      let def = Math.floor((rawBase * 0.35) * tData.mult); 
+      let spd = Math.floor((rawBase * 0.25) * tData.mult); 
+      let power = hp + atk + def + spd;
+
+      if(tIdx === 9 && power < 1000000) {
+        let boost = 1000000 / power;
+        hp = Math.floor(hp * boost); atk = Math.floor(atk * boost); def = Math.floor(def * boost); spd = Math.floor(spd * boost);
+        power = hp + atk + def + spd;
+      }
+      
+      let valMult = getValueMultiplier();
+      let finalValue = Math.floor(power * 1.8 * valMult); // Adjusted to tie to total grading power
+      let marketCost = Math.max(100, Math.floor(finalValue * getDiscountMultiplier()));
+
+      return {
+          uid: Date.now() + Math.random().toString(36).substring(2,8),
+          name: `${p} ${m} ${s}`, // Simplified name for card display
+          brand: b,
+          tierIndex: tIdx,
+          tierName: tData.name,
+          tierColor: tData.color,
+          hp: hp,
+          atk: atk,
+          def: def,
+          spd: spd,
+          power: power,
+          value: finalValue,
+          cost: marketCost,
+          mk: 0,
+          fashionMods: 0
+      };
+  }
+
+  /* ================= HUD & TABS ================= */
+  function setTab(tabName) {
+    document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('active'); if(b.getAttribute('onclick').includes(tabName)) b.classList.add('active'); });
+    document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+    const target = document.getElementById(`tab-${tabName}`); if(target) target.classList.add('active');
+    
+    if(tabName === 'hangar') renderHangar();
+    if(tabName === 'market') renderMarket();
+    if(tabName === 'upgrades') renderUpgrades();
+  }
+
+  function updateHUD() {
+    document.getElementById('hud-credits').innerText = `$${fmt(State.credits)}`;
+    document.getElementById('hud-ascension').innerText = `${State.prestige}`;
+    document.getElementById('hud-count').innerText = State.hangar.length;
+  }
+
+  /* ================= REVOLVING MARKET ================= */
+  function refreshMarket() {
+      State.marketCars = [];
+      for(let i=0; i<5; i++) {
+          let roll = Math.random() * 100;
+          let tIdx = 0;
+          if(roll > 40) tIdx = 1;
+          if(roll > 65) tIdx = 2;
+          if(roll > 80) tIdx = 3;
+          if(roll > 90) tIdx = 4;
+          if(roll > 95) tIdx = 5;
+          if(roll > 97.5) tIdx = 6;
+          if(roll > 99) tIdx = 7;
+          if(roll > 99.7) tIdx = 8;
+          if(roll > 99.9) tIdx = 9;
+          
+          State.marketCars.push(createCar(tIdx));
+      }
+      renderMarket();
+  }
+
+  function renderMarket() {
+      const grid = document.getElementById('revolving-market-grid');
+      if(!grid) return;
+      grid.innerHTML = '';
+
+      State.marketCars.forEach((c, idx) => {
+          const card = document.createElement('div');
+          card.className = `suit-card`;
+          card.style.borderColor = c.tierColor;
+          card.innerHTML = `
+            <div class="stat-block" style="display:flex; justify-content:space-between;">
+              <span style="color:${c.tierColor}; font-weight:bold;">${c.tierName.split(':')[0]}</span>
+              <span style="color:var(--text-dim);">${c.brand}</span>
+            </div>
+            <div class="entity-title" style="color:${c.tierColor};">${c.name}</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+              <div>
+                <div class="stat-block" style="font-size:10px; color:var(--text-dim);">Est Val: $${fmt(c.value)}</div>
+                <div class="stat-block" style="font-size:12px; color:var(--term-main); font-weight:bold;">Price: $${fmt(c.cost)}</div>
+              </div>
+              <button class="action-btn" style="padding:8px 16px; font-size:11px;" onclick="buyCar(${idx})">BUY</button>
+            </div>
+          `;
+          grid.appendChild(card);
+      });
+  }
+
+  function buyCar(idx) {
+      let c = State.marketCars[idx];
+      if(!c) return;
+      if(State.credits < c.cost) {
+          toast("Insufficient funds.");
+          return;
+      }
+      State.credits -= c.cost;
+      State.hangar.push(c);
+      State.marketCars.splice(idx, 1);
+      toast(`Purchased: ${c.name}`);
+      updateHUD();
+      renderMarket();
+  }
+
+  /* ================= CARGO SHIPMENTS (GACHA) ================= */
+  function buyCargo(bIdx, count) {
+    let costs = [5000, 25000, 100000, 500000];
+    let cost = costs[bIdx] * count;
+    if(State.credits < cost) { toast("Insufficient funds."); return; }
+    State.credits -= cost;
+    for(let i=0; i<count; i++) rollCargoCar(bIdx);
+    updateHUD();
+    toast(`Cracked ${count}x Products.`);
+  }
+
+  function rollCargoCar(bIdx) {
+    let tiers = [];
+    if(bIdx === 0) tiers = [0,1,2,3];
+    if(bIdx === 1) tiers = [2,3,4,5];
+    if(bIdx === 2) tiers = [4,5,6,7];
+    if(bIdx === 3) tiers = [6,7,8,9];
+
+    let roll = Math.random() * 100;
+    let cTier = tiers[0];
+    if(roll > 50) cTier = tiers[1];
+    if(roll > 80) cTier = tiers[2];
+    if(roll > 95) cTier = tiers[3];
+
+    let newCar = createCar(cTier);
+    State.hangar.push(newCar);
+  }
+
+  /* ================= THE BINDER ================= */
+  function sortHangar(mode) { State.sortMode = mode; renderHangar(); }
+
+  function renderHangar() {
+    const grid = document.getElementById('hangar-grid'); 
+    if(!grid) return;
+    grid.innerHTML = '';
+    
+    if(State.hangar.length === 0) { 
+        grid.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--text-dim); font-size:12px; font-weight:bold;">Binder is empty. Crack packs or buy singles.</div>`; 
+        renderEquippedTelemetry();
+        return; 
+    }
+
+    let sorted = [...State.hangar];
+    if(State.sortMode === 'value') sorted.sort((a,b) => b.value - a.value);
+    if(State.sortMode === 'tier') sorted.sort((a,b) => b.tierIndex - a.tierIndex);
+
+    sorted.forEach(s => {
+      let isEq = s.uid === State.equippedId;
+      let mkLabel = s.mk > 0 ? ` PSA ${Math.min(10, s.mk)}` : "";
+
+      const card = document.createElement('div');
+      card.className = `suit-card ${isEq ? 'equipped' : ''}`;
+      card.style.borderColor = s.tierColor;
+      card.innerHTML = `
+        <div class="stat-block" style="display:flex; justify-content:space-between;">
+            <span style="color:${s.tierColor}; font-weight:bold;">${s.tierName.split(':')[0]}</span>
+            <span style="color:var(--text-dim);">${s.brand}</span>
+        </div>
+        <div class="entity-title" style="color:${s.tierColor};">${s.name}${mkLabel}</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+          <span class="stat-block" style="font-size:12px; color:var(--term-main); font-weight:bold;">VAL: $${fmt(s.value)}</span>
+          <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end;">
+            ${!isEq ? `<button class="action-btn cyan-btn" style="padding:4px 6px; font-size:8px;" onclick="equipSuit('${s.uid}')">Showcase</button>` : ''}
+            ${!isEq ? `<button class="action-btn purple-btn" style="padding:4px 6px; font-size:8px;" onclick="initAuction('${s.uid}', event)">Auction</button>` : ''}
+            ${!isEq ? `<button class="action-btn red-btn" style="padding:4px 6px; font-size:8px;" onclick="sellCar('${s.uid}', event)">Bulk Sell</button>` : ''}
+          </div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+    renderEquippedTelemetry();
+  }
+
+  function equipSuit(uid) { State.equippedId = uid; renderHangar(); toast("Card moved to Showcase."); }
+
+  function sellCar(uid, e) {
+    let idx = State.hangar.findIndex(s => s.uid === uid);
+    if(idx > -1) { 
+      if(e) { let card = e.target.closest('.suit-card'); if(card) card.remove(); }
+      let sellVal = Math.floor(State.hangar[idx].value * 0.50); // 50% wholesale
+      State.credits += sellVal; 
+      State.hangar.splice(idx, 1); 
+      toast(`Liquidated for $${fmt(sellVal)}.`); 
+      updateHUD(); 
+      renderHangar(); 
+    }
+  }
+
+  function quickSell(maxTier) {
+    let toSell = State.hangar.filter(s => s.tierIndex <= maxTier && s.uid !== State.equippedId);
+    if(toSell.length === 0) { toast("No matching bulk available."); return; }
+    let total = 0; 
+    toSell.forEach(s => total += Math.floor(s.value * 0.50));
+    State.hangar = State.hangar.filter(s => s.tierIndex > maxTier || s.uid === State.equippedId);
+    State.credits += total; 
+    toast(`Liquidated ${toSell.length} cards as bulk for +$${fmt(total)}.`); 
+    updateHUD(); 
+    renderHangar();
+  }
+
+  function applyFashion(uid) {
+    if(State.credits < 10000) { toast("$10,000 required for Premium Toploader."); return; }
+    let s = State.hangar.find(x => x.uid === uid); if(!s) return;
+    State.credits -= 10000; s.fashionMods += 1;
+    s.hp = Math.floor(s.hp * 1.08); s.atk = Math.floor(s.atk * 1.08); s.def = Math.floor(s.def * 1.08); s.spd = Math.floor(s.spd * 1.08);
+    s.power = s.hp + s.atk + s.def + s.spd; s.value = Math.floor(s.power * 1.8);
+    toast(`Premium Toploader Applied. Preservation +8%!`); updateHUD(); renderHangar();
+  }
+
+  function upgradeMech(frac) {
+    let eq = State.hangar.find(s => s.uid === State.equippedId); if(!eq) return;
+    let cost = Math.max(5000, Math.floor(eq.power * 0.05));
+    let maxAfford = Math.floor(State.credits / cost); let toBuy = 0;
+    if(frac === '1') toBuy = 1; else if(frac === '1/2') toBuy = Math.max(1, Math.floor(maxAfford / 2)); else if(frac === 'max') toBuy = maxAfford;
+
+    if(toBuy <= 0 || State.credits < cost) { toast("Insufficient Funds for Grading."); return; }
+    State.credits -= toBuy * cost; eq.mk = (eq.mk || 0) + toBuy;
+
+    for(let i=0; i<toBuy; i++) {
+      let mult = 0.33 + (Math.random() * 3.0); let target = Math.floor(Math.random() * 5);
+      if(target === 0 || target === 4) eq.hp += Math.floor(eq.baseHp * mult);
+      if(target === 1 || target === 4) eq.atk += Math.floor(eq.baseAtk * mult);
+      if(target === 2 || target === 4) eq.def += Math.floor(eq.baseDef * mult);
+      if(target === 3 || target === 4) eq.spd += Math.floor(eq.baseSpd * mult);
+    }
+    eq.power = eq.hp + eq.atk + eq.def + eq.spd; eq.value = Math.floor(eq.power * 1.8);
+    toast(`Professional Grading submitted ${toBuy}x! (Score PSA ${Math.min(10, eq.mk)})`); updateHUD(); renderHangar();
+  }
+
+  function renderEquippedTelemetry() {
+    const p = document.getElementById('equipped-panel');
+    let baseEq = State.hangar.find(s => s.uid === State.equippedId);
+    if(!baseEq) { p.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--text-dim); font-size:11px;">No Card in Showcase.</div>`; return; }
+    
+    let mkLabel = baseEq.mk > 0 ? ` PSA ${Math.min(10, baseEq.mk)}` : "";
+    let cost = Math.max(5000, Math.floor(baseEq.power * 0.05));
+
+    p.innerHTML = `
+      <div style="border-left: 3px solid ${baseEq.tierColor}; padding-left: 8px; margin-bottom:8px;">
+        <div class="stat-block" style="font-size:9px; color:${baseEq.tierColor}; text-transform:uppercase;">${baseEq.tierName} [SCORE: ${fmt(baseEq.power)}]</div>
+        <div class="entity-title" style="font-size:14px; font-weight:bold; color:#fff;">${baseEq.name}${mkLabel}</div>
+        <div class="stat-block" style="font-size:10px; color:var(--text-dim);">${baseEq.brand} - ${baseEq.code}</div>
+      </div>
+      <div class="stat-block" style="background:#000; padding:8px; border:1px solid var(--panel-border); font-size:10px; display:flex; flex-direction:column; gap:4px; margin-bottom:8px;">
+        <div style="display:flex; justify-content:space-between;"><span>CENTERING:</span><span style="color:var(--term-main); font-weight:bold;">${fmt(baseEq.hp)}</span></div>
+        <div style="display:flex; justify-content:space-between;"><span>CORNERS:</span><span style="color:var(--term-sec); font-weight:bold;">${fmt(baseEq.atk)}</span></div>
+        <div style="display:flex; justify-content:space-between;"><span>EDGES:</span><span style="color:var(--term-purple); font-weight:bold;">${fmt(baseEq.def)}</span></div>
+        <div style="display:flex; justify-content:space-between;"><span>SURFACE:</span><span style="color:var(--term-red); font-weight:bold;">${fmt(baseEq.spd)}</span></div>
+      </div>
+      <div style="font-size:9px; color:var(--term-main); margin-bottom:4px;">Professional Grading Fees ($${fmt(cost)} / sub)</div>
+      <div class="fraction-row">
+        <button class="action-btn" onclick="upgradeMech('1')">Grade 1</button>
+        <button class="action-btn" onclick="upgradeMech('1/2')">Grade 1/2</button>
+        <button class="action-btn" onclick="upgradeMech('max')">Grade MAX</button>
+      </div>
+      <button class="action-btn purple-btn" style="width:100%; padding:10px; font-size:9px; margin-top:8px;" onclick="applyFashion('${baseEq.uid}')">Apply Premium Toploader ($10K) -> +8% Score</button>
+    `;
+  }
+
+  /* ================= AUCTION BLOCK (STREAMER BREAKS) ================= */
+  function initAuction(uid, e) {
+    if(State.auctions.length >= 5) { toast("Auction lanes full (Max 5)."); return; }
+    let sIdx = State.hangar.findIndex(s => s.uid === uid); if(sIdx === -1) return;
+    
+    if(e) { let card = e.target.closest('.suit-card'); if(card) card.remove(); }
+    
+    let suit = State.hangar[sIdx]; 
+    State.hangar.splice(sIdx, 1);
+
+    State.auctions.push({ 
+        suit: suit, 
+        baseVal: suit.value, 
+        timer: 20.0, 
+        currentBid: Math.floor(suit.value * 0.90), // V1.3 Math: Starts at 90%
+        log: [] 
+    });
+    updateHUD(); 
+    renderAuctions(); 
+    toast("Sent to Streamer Break.");
+  }
+
+  function fillAuctions() {
+    let available = 5 - State.auctions.length;
+    if(available <= 0) { toast("Auction lanes are already full."); return; }
+    let candidates = State.hangar.filter(s => s.uid !== State.equippedId).sort((a,b) => a.value - b.value);
+    if(candidates.length === 0) { toast("Binder is empty."); return; }
+
+    let toList = candidates.slice(0, available);
+    toList.forEach(s => {
+      let idx = State.hangar.findIndex(x => x.uid === s.uid); 
+      State.hangar.splice(idx, 1);
+      State.auctions.push({ 
+          suit: s, 
+          baseVal: s.value, 
+          timer: 20.0, 
+          currentBid: Math.floor(s.value * 0.90), // V1.3 Math: Starts at 90%
+          log: [] 
+      });
+    });
+    updateHUD(); 
+    renderHangar(); 
+    renderAuctions(); 
+    toast("Streamer breaks filled.");
+  }
+
+  function renderAuctions() {
+    const board = document.getElementById('auction-board');
+    if(!board) return;
+    document.getElementById('auction-count').innerText = State.auctions.length; 
+    board.innerHTML = '';
+
+    if(State.auctions.length === 0) {
+        document.getElementById('auction-idle').style.display = 'block';
+        return;
+    } else {
+        document.getElementById('auction-idle').style.display = 'none';
+    }
+
+    State.auctions.forEach((a) => {
+      let pct = (a.timer / 20.0) * 100; 
+      let htmlLog = a.log.map(l => `<div>${l}</div>`).join('');
+      
+      board.innerHTML += `
+        <div class="auction-slot">
+          <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+            <div>
+              <div class="entity-title" style="font-size:13px; color:${a.suit.tierColor};">${a.suit.name}</div>
+              <div class="stat-block" style="font-size:10px; color:var(--text-dim); margin-top:2px;">VAL: $${fmt(a.baseVal)}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:9px; color:var(--text-dim); font-weight:bold;">TIME [${a.timer.toFixed(1)}s]</div>
+              <div class="stat-block" style="font-size:16px; font-weight:bold; color:var(--term-main);">$${fmt(a.currentBid)}</div>
+            </div>
+          </div>
+          <div class="auction-timer-bg"><div class="auction-timer-bar" style="width:${pct}%; background:${a.timer <= 3.0 ? 'var(--term-red)' : 'var(--term-main)'}"></div></div>
+          <div class="stat-block" style="background:#000; padding:6px; font-size:10px; height:50px; overflow:hidden; border-radius:4px; border:1px solid #23113d;">${htmlLog}</div>
+        </div>
+      `;
+    });
+  }
+
+  /* ================= UPGRADES & PRESTIGE ================= */
+  function getUpgradeCost(type) {
+      if(type === 'value') return Math.floor(10000 * Math.pow(1.5, State.upgrades.valueLvl));
+      if(type === 'discount') return Math.floor(15000 * Math.pow(1.6, State.upgrades.discountLvl));
+      return 999999999;
+  }
+
+  function renderUpgrades() {
+      let vCost = getUpgradeCost('value');
+      let dCost = getUpgradeCost('discount');
+
+      document.getElementById('upg-val-lvl').innerText = State.upgrades.valueLvl;
+      document.getElementById('upg-val-pct').innerText = State.upgrades.valueLvl * 2;
+      document.getElementById('upg-val-cost').innerText = fmt(vCost);
+      document.getElementById('btn-upg-val').disabled = State.credits < vCost;
+
+      document.getElementById('upg-disc-lvl').innerText = State.upgrades.discountLvl;
+      document.getElementById('upg-disc-pct').innerText = State.upgrades.discountLvl * 2;
+      document.getElementById('upg-disc-cost').innerText = fmt(dCost);
+      document.getElementById('btn-upg-disc').disabled = State.credits < dCost;
+
+      let pReq = 100000 * Math.pow(10, State.prestige);
+      document.getElementById('prestige-req').innerText = fmt(pReq);
+  }
+
+  function buyUpgrade(type) {
+      let cost = getUpgradeCost(type);
+      if(State.credits < cost) return;
+      State.credits -= cost;
+      if(type === 'value') State.upgrades.valueLvl++;
+      if(type === 'discount') State.upgrades.discountLvl++;
+      updateHUD();
+      renderUpgrades();
+  }
+
+  function prestige() {
+      let pReq = 100000 * Math.pow(10, State.prestige);
+      if(State.credits < pReq) {
+          toast(`You need $${fmt(pReq)} to expand the store.`);
+          return;
+      }
+      
+      State.prestige++;
+      State.credits = 5000;
+      State.hangar = [];
+      State.auctions = [];
+      State.equippedId = null;
+      refreshMarket();
+      
+      toast(`STORE EXPANDED! Level ${State.prestige}. Global Multipliers Increased!`);
+      updateHUD();
+      setTab('market');
+  }
+
+  /* ================= GAME LOOP (MARKET & AUCTIONS) ================= */
+  const FACTIONS = ["Hypebeast","Nostalgic Collector","Scalper","Pro Player","Investment Bro","Streamer","TCG Whale","Pawn Shop"];
+
+  function gameTick() {
+      State.marketTimer -= 0.1;
+      let mTimerUI = document.getElementById('market-timer');
+      if(mTimerUI) mTimerUI.innerText = Math.max(0, State.marketTimer).toFixed(1);
+
+      if(State.marketTimer <= 0) {
+          State.marketTimer = 10.0;
+          refreshMarket();
+      }
+
+      if(State.auctions.length > 0) {
+          let needsRender = false;
+          
+          for(let i = State.auctions.length - 1; i >= 0; i--) {
+              let a = State.auctions[i];
+              a.timer -= 0.1;
+              needsRender = true;
+
+              // V1.3 FIX Math: 10% per tick -> Snappy and frequent
+              if(a.timer > 0 && Math.random() < 0.10) {
+                  let faction = FACTIONS[Math.floor(Math.random() * FACTIONS.length)]; 
+                  
+                  // V1.3 FIX Math: Standard bids 5% to 15% increase
+                  let mult = 1.05 + (Math.random() * 0.10); 
+                  
+                  // V1.3 FIX Math: Bid war spike: 2.0x to 20.0x multiplier
+                  if(Math.random() < 0.015) { 
+                      mult = 2.0 + (Math.random() * 18.0); 
+                      a.log.push(`<span style="color:var(--term-sec);">[BID WAR] Spike multiplier!</span>`);
+                  }
+
+                  let newBid = Math.floor(a.currentBid * mult);
+                  if(newBid <= a.currentBid) newBid = a.currentBid + 1;
+                  a.currentBid = newBid;
+                  
+                  a.log.push(`<span style="color:var(--term-main);">[${faction}] bids $${fmt(a.currentBid)}</span>`);
+                  if(a.log.length > 3) a.log.shift();
+
+                  // Overtime Sniping: Resets to 3s if under 1s
+                  if(a.timer <= 1.0) {
+                      a.timer = 3.0;
+                      a.log.push(`<span style="color:var(--term-red);">[SNIPED] Timer reset to 3s!</span>`);
+                  }
+              }
+
+              // End Auction
+              if(a.timer <= 0) {
+                  State.credits += a.currentBid; 
+                  toast(`SOLD: ${a.suit.name} for +$${fmt(a.currentBid)}!`);
+                  State.auctions.splice(i, 1); 
+                  updateHUD();
+              }
+          }
+          if(needsRender && document.getElementById('tab-auction').classList.contains('active')) {
+              renderAuctions();
+          }
+      }
+  }
+
+  function initUI() {
+    const tGrid = document.getElementById('tier-breakdown-grid');
+    if (tGrid) {
+      TIERS.forEach(t => { 
+        tGrid.innerHTML += `<div style="background:#000; border:1px solid ${t.color}; padding:6px; border-radius:4px;"><span style="color:${t.color}; font-weight:bold;">${t.name}</span><br><span style="color:var(--text-dim);">Min Val: $${fmt(t.minBase)}</span></div>`; 
+      });
+    }
+
+    refreshMarket(); 
+    updateHUD(); 
+    renderUpgrades();
+    
+    if(globalInterval) clearInterval(globalInterval);
+    globalInterval = setInterval(gameTick, 100);
+  }
+  
+  initUI();
+</script>
+</body>
+</html>
